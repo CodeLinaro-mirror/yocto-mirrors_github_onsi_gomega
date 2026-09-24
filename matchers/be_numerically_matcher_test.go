@@ -1,6 +1,8 @@
 package matchers_test
 
 import (
+	"math"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/matchers"
@@ -127,6 +129,41 @@ var _ = Describe("BeNumerically", func() {
 					})
 				})
 			})
+		})
+
+		It("compares signed and unsigned integers by value (https://github.com/onsi/gomega/issues/925)", func() {
+			Expect(-1).ShouldNot(BeNumerically("==", uint64(math.MaxUint64)))
+			Expect(uint64(math.MaxUint64)).ShouldNot(BeNumerically("==", -1))
+			Expect(-1).ShouldNot(BeNumerically("~", uint64(math.MaxUint64), 1))
+			Expect(uint64(math.MaxUint64)).ShouldNot(BeNumerically("~", -1, uint(1)))
+
+			Expect(uint(5)).Should(BeNumerically(">", -3))
+			Expect(uint(5)).Should(BeNumerically(">=", -3))
+			Expect(uint(5)).ShouldNot(BeNumerically("<", -3))
+			Expect(uint(5)).ShouldNot(BeNumerically("<=", -3))
+			Expect(-3).Should(BeNumerically("<", uint(5)))
+			Expect(-3).Should(BeNumerically("<=", uint(5)))
+			Expect(-3).ShouldNot(BeNumerically(">", uint(5)))
+			Expect(-3).ShouldNot(BeNumerically(">=", uint(5)))
+
+			Expect(int64(-1)).Should(BeNumerically("<", uint64(math.MaxUint64)))
+			Expect(uint64(math.MaxUint64)).Should(BeNumerically(">", int64(math.MinInt64)))
+			Expect(uint64(math.MaxInt64 + 1)).Should(BeNumerically(">", int64(math.MaxInt64)))
+			Expect(int64(math.MaxInt64)).Should(BeNumerically("<", uint64(math.MaxInt64+1)))
+
+			Expect(uint(3)).Should(BeNumerically("==", 3))
+			Expect(3).Should(BeNumerically("==", uint(3)))
+			Expect(uint(2)).Should(BeNumerically("~", -1, 3))
+			Expect(uint(2)).ShouldNot(BeNumerically("~", -1, 2))
+			Expect(-1).Should(BeNumerically("~", uint(2), uint(3)))
+			Expect(-1).ShouldNot(BeNumerically("~", uint(2), uint(2)))
+			Expect(uint64(math.MaxUint64)).ShouldNot(BeNumerically("~", -1, uint64(math.MaxUint64)))
+			Expect(uint64(math.MaxUint64)).Should(BeNumerically("~", -1, math.Exp2(64)))
+			Expect(uint64(math.MaxUint64)).ShouldNot(BeNumerically("~", int64(math.MinInt64), uint64(math.MaxUint64)))
+
+			// a negative threshold never matches, whatever the signedness of the operands
+			Expect(uint(5)).ShouldNot(BeNumerically("~", uint(5), -1))
+			Expect(5).ShouldNot(BeNumerically("~", 5, -1))
 		})
 	})
 
