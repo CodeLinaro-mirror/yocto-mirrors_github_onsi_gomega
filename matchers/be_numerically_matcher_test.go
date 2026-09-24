@@ -165,6 +165,18 @@ var _ = Describe("BeNumerically", func() {
 			Expect(uint(5)).ShouldNot(BeNumerically("~", uint(5), -1))
 			Expect(5).ShouldNot(BeNumerically("~", 5, -1))
 		})
+
+		It("does not overflow when computing the distance between extreme integers (https://github.com/onsi/gomega/issues/928)", func() {
+			Expect(int64(math.MinInt64)).ShouldNot(BeNumerically("~", int64(math.MaxInt64), 1))
+			Expect(int64(math.MaxInt64)).ShouldNot(BeNumerically("~", int64(math.MinInt64), 1))
+			Expect(int64(math.MinInt64)).ShouldNot(BeNumerically("==", int64(math.MaxInt64), 1))
+			Expect(int64(math.MinInt64)).ShouldNot(BeNumerically("~", int64(math.MaxInt64), int64(math.MaxInt64)))
+			Expect(int64(math.MinInt64)).ShouldNot(BeNumerically("~", int64(math.MaxInt64), uint64(math.MaxUint64-1)))
+			Expect(int64(math.MinInt64)).Should(BeNumerically("~", int64(math.MaxInt64), uint64(math.MaxUint64)))
+			Expect(int64(math.MinInt64)).Should(BeNumerically("~", int64(math.MinInt64)+1, 1))
+			Expect(int64(math.MaxInt64)).Should(BeNumerically("~", int64(math.MaxInt64)-1, 1))
+			Expect(uint64(0)).ShouldNot(BeNumerically("~", uint64(math.MaxUint64), 1))
+		})
 	})
 
 	When("passed a non-number", func() {
