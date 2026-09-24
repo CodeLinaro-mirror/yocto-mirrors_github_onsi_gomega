@@ -67,6 +67,14 @@ var _ = Describe("HaveKeyWithValue", func() {
 			Expect(success).Should(BeFalse())
 			Expect(err).Should(HaveOccurred())
 		})
+
+		It("succeeds if any matching key has a matching value (https://github.com/onsi/gomega/issues/929)", func() {
+			actual := map[string]string{"aFoo": "x", "bFoo": "Bar", "cFoo": "y", "dFoo": "z"}
+			for range 100 {
+				Expect(actual).Should(HaveKeyWithValue(MatchRegexp(`.+Foo$`), "Bar"))
+				Expect(actual).ShouldNot(HaveKeyWithValue(MatchRegexp(`.+Foo$`), "Baz"))
+			}
+		})
 	})
 
 	When("passed something that is not a map", func() {
@@ -124,6 +132,19 @@ var _ = Describe("HaveKeyWithValue", func() {
 				success, err = (&HaveKeyWithValueMatcher{Key: "foo", Value: ContainSubstring("1")}).Match(universalMapIter2)
 				Expect(success).Should(BeFalse())
 				Expect(err).Should(HaveOccurred())
+			})
+
+			It("succeeds if any matching key has a matching value (https://github.com/onsi/gomega/issues/929)", func() {
+				matchingLast := func(yield func(string, string) bool) {
+					_ = yield("aFoo", "x") && yield("cFoo", "y") && yield("bFoo", "Bar")
+				}
+				matchingFirst := func(yield func(string, string) bool) {
+					_ = yield("bFoo", "Bar") && yield("aFoo", "x") && yield("cFoo", "y")
+				}
+				Expect(matchingLast).Should(HaveKeyWithValue(MatchRegexp(`.+Foo$`), "Bar"))
+				Expect(matchingFirst).Should(HaveKeyWithValue(MatchRegexp(`.+Foo$`), "Bar"))
+				Expect(matchingLast).ShouldNot(HaveKeyWithValue(MatchRegexp(`.+Foo$`), "Baz"))
+				Expect(matchingFirst).ShouldNot(HaveKeyWithValue(MatchRegexp(`.+Foo$`), "Baz"))
 			})
 		})
 

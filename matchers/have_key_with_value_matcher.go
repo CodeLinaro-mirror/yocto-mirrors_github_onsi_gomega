@@ -63,7 +63,9 @@ func (matcher *HaveKeyWithValueMatcher) Match(actual any) (success bool, err err
 			if err != nil {
 				return false, fmt.Errorf("HaveKeyWithValue's value matcher failed with:\n%s%s", format.Indent, err.Error())
 			}
-			return success, nil
+			if success {
+				return true, nil
+			}
 		}
 	}
 
