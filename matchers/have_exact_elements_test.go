@@ -97,6 +97,24 @@ var _ = Describe("HaveExactElements", func() {
 				expected := "Expected\n.*\\[1, 2\\]\nto have exact elements with\n.*\\[1\\]\nthe extra elements start from index 1"
 				Expect(failures).To(ConsistOf(MatchRegexp(expected)))
 			})
+
+			It("should print the starting index of the extra elements when it is 0 (https://github.com/onsi/gomega/issues/934)", func() {
+				failures := InterceptGomegaFailures(func() {
+					Expect([]string{"x"}).Should(HaveExactElements())
+				})
+
+				expected := "Expected\n.*\\[\"x\"\\]\nto have exact elements with\n.*\\[\\]\nthe extra elements start from index 0$"
+				Expect(failures).To(ConsistOf(MatchRegexp(expected)))
+			})
+
+			It("should print the index of the first extra element when there are several (https://github.com/onsi/gomega/issues/934)", func() {
+				failures := InterceptGomegaFailures(func() {
+					Expect([]int{1, 2, 3}).Should(HaveExactElements(1))
+				})
+
+				expected := "Expected\n.*\\[1, 2, 3\\]\nto have exact elements with\n.*\\[1\\]\nthe extra elements start from index 1$"
+				Expect(failures).To(ConsistOf(MatchRegexp(expected)))
+			})
 		})
 
 		When("actual misses an element", func() {
@@ -106,6 +124,15 @@ var _ = Describe("HaveExactElements", func() {
 				})
 
 				expected := "Expected\n.*\\[1\\]\nto have exact elements with\n.*\\[1, 2\\]\nthe missing elements start from index 1"
+				Expect(failures).To(ConsistOf(MatchRegexp(expected)))
+			})
+
+			It("should print the starting index of missing element when it is 0 (https://github.com/onsi/gomega/issues/934)", func() {
+				failures := InterceptGomegaFailures(func() {
+					Expect([]string{}).Should(HaveExactElements("a"))
+				})
+
+				expected := "Expected\n.*\\[\\]\nto have exact elements with\n.*\\[\"a\"\\]\nthe missing elements start from index 0$"
 				Expect(failures).To(ConsistOf(MatchRegexp(expected)))
 			})
 		})
@@ -130,6 +157,16 @@ to equal
 to equal
     <int>: 1`
 				Expect(failures[0]).To(MatchRegexp(expected))
+			})
+
+			It("should not mention missing or extra elements (https://github.com/onsi/gomega/issues/934)", func() {
+				failures := InterceptGomegaFailures(func() {
+					Expect([]int{1, 2}).Should(HaveExactElements(2, 1))
+				})
+
+				Expect(failures).To(HaveLen(1))
+				Expect(failures[0]).NotTo(ContainSubstring("missing elements"))
+				Expect(failures[0]).NotTo(ContainSubstring("extra elements"))
 			})
 		})
 	})
@@ -231,6 +268,15 @@ to equal
 					expected := "Expected\n.*<func\\(func\\(string\\) bool\\)>:.*\nto have exact elements with\n.*\\[\"foo\"\\]\nthe extra elements start from index 1"
 					Expect(failures).To(ConsistOf(MatchRegexp(expected)))
 				})
+
+				It("should print the starting index of the extra elements when it is 0 (https://github.com/onsi/gomega/issues/934)", func() {
+					failures := InterceptGomegaFailures(func() {
+						Expect(universalIter).Should(HaveExactElements())
+					})
+
+					expected := "Expected\n.*<func\\(func\\(string\\) bool\\)>:.*\nto have exact elements with\n.*\\[\\]\nthe extra elements start from index 0$"
+					Expect(failures).To(ConsistOf(MatchRegexp(expected)))
+				})
 			})
 
 			When("actual misses an element", func() {
@@ -240,6 +286,15 @@ to equal
 					})
 
 					expected := "Expected\n.*<func\\(func\\(string\\) bool\\)>:.*\nto have exact elements with\n.*\\[\"foo\", \"bar\", \"baz\", \"argh\"\\]\nthe missing elements start from index 3"
+					Expect(failures).To(ConsistOf(MatchRegexp(expected)))
+				})
+
+				It("should print the starting index of missing element when it is 0 (https://github.com/onsi/gomega/issues/934)", func() {
+					failures := InterceptGomegaFailures(func() {
+						Expect(emptyIter).Should(HaveExactElements("foo"))
+					})
+
+					expected := "Expected\n.*<func\\(func\\(string\\) bool\\)>:.*\nto have exact elements with\n.*\\[\"foo\"\\]\nthe missing elements start from index 0$"
 					Expect(failures).To(ConsistOf(MatchRegexp(expected)))
 				})
 			})
