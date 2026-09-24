@@ -46,6 +46,77 @@ var _ = Describe("MatchYAMLMatcher", func() {
 		})
 	})
 
+	Context("with multi-document YAML streams (https://github.com/onsi/gomega/issues/933)", func() {
+		It("should compare every document, not just the first", func() {
+			Expect("a: 1\n---\nb: 2").ShouldNot(MatchYAML("a: 1"))
+			Expect("a: 1").ShouldNot(MatchYAML("a: 1\n---\nb: 2"))
+			Expect("a: 1\n---\nb: 3").ShouldNot(MatchYAML("a: 1\n---\nb: 2"))
+			Expect("a: 2\n---\nb: 2").ShouldNot(MatchYAML("a: 1\n---\nb: 2"))
+			Expect("{a: 1}\n---\n{b: 2}\n").Should(MatchYAML("a: 1\n---\nb: 2"))
+		})
+
+		It("should not confuse a stream of documents with a single document holding a list", func() {
+			Expect("- a: 1\n- b: 2").ShouldNot(MatchYAML("a: 1\n---\nb: 2"))
+			Expect("a: 1\n---\nb: 2").ShouldNot(MatchYAML("- a: 1\n- b: 2"))
+		})
+
+		It("should ignore empty documents, such as those created by leading or trailing document separators", func() {
+			Expect("---\na: 1").Should(MatchYAML("a: 1"))
+			Expect("a: 1\n---\n").Should(MatchYAML("a: 1"))
+			Expect("---\na: 1\n---\n# nothing to see here\n").Should(MatchYAML("a: 1"))
+			Expect("---\na: 1\n---\n---\nb: 2\n---\n").Should(MatchYAML("a: 1\n---\nb: 2"))
+			Expect("---\n---\n").Should(MatchYAML(""))
+		})
+
+		It("should treat explicit null documents as documents", func() {
+			Expect("a: 1\n---\n~").ShouldNot(MatchYAML("a: 1"))
+			Expect("a: 1\n---\nnull").Should(MatchYAML("a: 1\n---\n~"))
+			Expect("null").Should(MatchYAML(""))
+		})
+
+		It("should error if any document is invalid", func() {
+			success, err := (&MatchYAMLMatcher{YAMLToMatch: "a: 1"}).Match("a: 1\n---\ngood:\nbad")
+			Expect(success).Should(BeFalse())
+			Expect(err).Should(MatchError(ContainSubstring("Actual 'a: 1\n---\ngood:\nbad' should be valid YAML")))
+
+			success, err = (&MatchYAMLMatcher{YAMLToMatch: "a: 1\n---\ngood:\nbad"}).Match("a: 1")
+			Expect(success).Should(BeFalse())
+			Expect(err).Should(MatchError(ContainSubstring("Expected 'a: 1\n---\ngood:\nbad' should be valid YAML")))
+		})
+
+		It("should show every document, and say which document mismatched, when explaining a failure", func() {
+			matcher := &MatchYAMLMatcher{YAMLToMatch: "a: 1\n---\nb: {c: 2}"}
+			Expect(matcher.Match("a: 1\n---\nb: {c: 3}")).To(BeFalse())
+			Expect(matcher.FailureMessage("a: 1\n---\nb: {c: 3}")).To(Equal(`Expected
+    <string>: a: 1
+    ---
+    b:
+        c: 3
+to match YAML of
+    <string>: a: 1
+    ---
+    b:
+        c: 2
+
+first mismatched document: 2 (counting from 1)
+
+first mismatched key: "b"."c"`))
+		})
+
+		It("should not mention documents when explaining a failure between single documents", func() {
+			matcher := &MatchYAMLMatcher{YAMLToMatch: "b: {c: 2}"}
+			Expect(matcher.Match("---\nb: {c: 3}")).To(BeFalse())
+			Expect(matcher.FailureMessage("---\nb: {c: 3}")).To(Equal(`Expected
+    <string>: b:
+        c: 3
+to match YAML of
+    <string>: b:
+        c: 2
+
+first mismatched key: "b"."c"`))
+		})
+	})
+
 	When("the expected is not valid YAML", func() {
 		It("should error and explain why", func() {
 			success, err := (&MatchYAMLMatcher{YAMLToMatch: ""}).Match("good:\nbad")

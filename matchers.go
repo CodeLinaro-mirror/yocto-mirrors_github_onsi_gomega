@@ -310,6 +310,8 @@ func MatchXML(xml any) types.GomegaMatcher {
 // MatchYAML succeeds if actual is a string or stringer of YAML that matches
 // the expected YAML.  The YAML's are decoded and the resulting objects are compared via
 // reflect.DeepEqual so things like key-ordering and whitespace shouldn't matter.
+// Multi-document YAML streams are compared document by document; empty documents
+// (e.g. from a leading or trailing "---") are ignored.
 func MatchYAML(yaml any) types.GomegaMatcher {
 	return &matchers.MatchYAMLMatcher{
 		YAMLToMatch: yaml,

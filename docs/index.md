@@ -1144,6 +1144,8 @@ It is an error for either `ACTUAL` or `EXPECTED` to be invalid XML.
 
 Both `ACTUAL` and `EXPECTED` must be a `string`, `[]byte` or a `Stringer`.  `MatchYAML` succeeds if both `ACTUAL` and `EXPECTED` are YAML representations of the same object.  This is verified by parsing both `ACTUAL` and `EXPECTED` and then asserting equality on the resulting objects with `reflect.DeepEqual`.  By doing this `MatchYAML` avoids any issues related to white space, formatting, and key-ordering.
 
+If `ACTUAL` or `EXPECTED` is a stream of several YAML documents (separated by `---`), every document is compared, in order, and both streams must contain the same number of documents.  Empty documents - such as those produced by a leading or trailing `---` - are ignored.
+
 It is an error for either `ACTUAL` or `EXPECTED` to be invalid YAML.
 
 ### Working with Collections
