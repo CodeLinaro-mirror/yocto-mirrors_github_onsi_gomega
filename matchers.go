@@ -302,8 +302,8 @@ func MatchJSON(json any) types.GomegaMatcher {
 // MatchXML succeeds if actual is a string or stringer of XML that matches
 // the expected XML.  The XMLs are decoded and the resulting objects are compared via
 // reflect.DeepEqual so things like whitespaces shouldn't matter.
-// Names are compared by namespace URI, not prefix, and namespace declarations
-// (xmlns attributes) are not themselves compared.
+// Namespace prefixes are ignored: element and attribute names are compared by
+// namespace URI, and the namespace URIs declared on each element must match.
 func MatchXML(xml any) types.GomegaMatcher {
 	return &matchers.MatchXMLMatcher{
 		XMLToMatch: xml,

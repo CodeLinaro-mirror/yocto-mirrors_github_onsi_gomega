@@ -1134,7 +1134,7 @@ In some cases it is useful to match two JSON strings while ignoring list order. 
 
 Both `ACTUAL` and `EXPECTED` must be a `string`, `[]byte` or a `Stringer`.  `MatchXML` succeeds if both `ACTUAL` and `EXPECTED` are XML representations of the same object.  This is verified by parsing both `ACTUAL` and `EXPECTED` and then asserting equality on the resulting objects with `reflect.DeepEqual`.  By doing this `MatchXML` avoids any issues related to white space or formatting.
 
-Element and attribute names are compared by namespace URI rather than by prefix, and namespace declarations (`xmlns="..."` and `xmlns:prefix="..."`) are not themselves compared.  So `<a xmlns:p="urn:u"><p:b/></a>` matches `<a xmlns:q="urn:u"><q:b/></a>` and `<a xmlns="urn:u"><b/></a>` matches `<p:a xmlns:p="urn:u"><p:b/></p:a>`.  Note that this means a namespace declaration that no element or attribute uses has no effect on the comparison.
+Namespace prefixes are ignored: element and attribute names are compared by namespace URI, and the namespace declarations on each element (`xmlns="..."` and `xmlns:prefix="..."`) are compared by the URIs they declare, not the prefixes they bind.  So `<a xmlns:p="urn:u"><p:b/></a>` matches `<a xmlns:q="urn:u"><q:b/></a>` and `<a xmlns="urn:u"><b/></a>` matches `<p:a xmlns:p="urn:u"><p:b/></p:a>`.  The namespace URIs declared on each element must still match, even if they are unused, so `<a xmlns:p="urn:u"/>` matches neither `<a/>` nor `<a xmlns:p="urn:v"/>`.
 
 It is an error for either `ACTUAL` or `EXPECTED` to be invalid XML.
 

@@ -83,7 +83,7 @@ func parseXmlContent(content string) (*xmlNode, error) {
 
 		switch tok := tok.(type) {
 		case xml.StartElement:
-			attrs := withoutNamespaceDeclarations(tok.Attr)
+			attrs := withNormalizedNamespaceDeclarations(tok.Attr)
 			sort.Sort(attrs)
 			allNodes = append(allNodes, &xmlNode{XMLName: tok.Name, XMLAttr: attrs})
 		case xml.EndElement:
@@ -109,19 +109,20 @@ func parseXmlContent(content string) (*xmlNode, error) {
 	return firstNode, nil
 }
 
-// withoutNamespaceDeclarations drops the xmlns="..." and xmlns:prefix="..."
-// attributes.  The decoder has already resolved element and attribute names to
-// namespace URIs, so comparing the declarations would only compare the prefixes
-// that the documents happen to use.
-func withoutNamespaceDeclarations(attrs []xml.Attr) attributesSlice {
-	filtered := attributesSlice{}
-	for _, attr := range attrs {
+// withNormalizedNamespaceDeclarations replaces the name of each xmlns="..." and
+// xmlns:prefix="..." attribute with the same placeholder name, so that only the
+// namespace URIs declared on the element are compared, not the prefixes bound
+// to them.  The decoder has already resolved element and attribute names to
+// namespace URIs, so the prefixes play no other part in the comparison.
+func withNormalizedNamespaceDeclarations(attrs []xml.Attr) attributesSlice {
+	normalized := make(attributesSlice, len(attrs))
+	for i, attr := range attrs {
 		if attr.Name.Space == "xmlns" || (attr.Name.Space == "" && attr.Name.Local == "xmlns") {
-			continue
+			attr.Name = xml.Name{Space: "xmlns"}
 		}
-		filtered = append(filtered, attr)
+		normalized[i] = attr
 	}
-	return filtered
+	return normalized
 }
 
 func newXmlDecoder(reader io.Reader) *xml.Decoder {

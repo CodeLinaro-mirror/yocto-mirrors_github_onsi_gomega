@@ -47,12 +47,14 @@ var _ = Describe("MatchXMLMatcher", func() {
 		It("matches documents that bind the same namespace to different prefixes", func() {
 			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).Should(MatchXML(`<a xmlns:q="urn:u"><q:b/></a>`))
 			Expect(`<a xmlns="urn:u"><b/></a>`).Should(MatchXML(`<p:a xmlns:p="urn:u"><p:b/></p:a>`))
-			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).Should(MatchXML(`<a><b xmlns="urn:u"/></a>`))
+			Expect(`<a xmlns:p="urn:u" xmlns:q="urn:u"><p:b/></a>`).Should(MatchXML(`<a xmlns:p="urn:u" xmlns:q="urn:u"><q:b/></a>`))
 			Expect(`<a xmlns:p="urn:u" p:x="1"/>`).Should(MatchXML(`<a xmlns:q="urn:u" q:x="1"/>`))
+			Expect(`<p:a xmlns:p="urn:u" xmlns:q="urn:v"/>`).Should(MatchXML(`<a xmlns:r="urn:v" xmlns="urn:u"/>`))
 		})
 
 		It("does not match documents whose elements are in different namespaces", func() {
 			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).ShouldNot(MatchXML(`<a xmlns:p="urn:v"><p:b/></a>`))
+			Expect(`<a xmlns:p="urn:v"><p:b/></a>`).ShouldNot(MatchXML(`<a xmlns:p="urn:u"><p:b/></a>`))
 			Expect(`<a xmlns="urn:u"><b/></a>`).ShouldNot(MatchXML(`<a><b/></a>`))
 			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).ShouldNot(MatchXML(`<a><b/></a>`))
 			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).ShouldNot(MatchXML(`<a xmlns:p="urn:u"><b/></a>`))
@@ -62,6 +64,21 @@ var _ = Describe("MatchXMLMatcher", func() {
 			Expect(`<a xmlns:p="urn:u" p:x="1"/>`).ShouldNot(MatchXML(`<a xmlns:p="urn:v" p:x="1"/>`))
 			Expect(`<a xmlns:p="urn:u" p:x="1"/>`).ShouldNot(MatchXML(`<a xmlns:p="urn:u" x="1"/>`))
 			Expect(`<a xmlns:p="urn:u" p:x="1"/>`).ShouldNot(MatchXML(`<a xmlns:p="urn:u" p:x="2"/>`))
+		})
+
+		It("requires the same namespace URIs to be declared on each element, even if they are unused", func() {
+			Expect(`<a xmlns:p="urn:x"/>`).ShouldNot(MatchXML(`<a/>`))
+			Expect(`<a/>`).ShouldNot(MatchXML(`<a xmlns:p="urn:x"/>`))
+			Expect(`<a xmlns:p="urn:x"/>`).ShouldNot(MatchXML(`<a xmlns:p="urn:y"/>`))
+			Expect(`<a xmlns:p="urn:x" xmlns:q="urn:x"/>`).ShouldNot(MatchXML(`<a xmlns:p="urn:x"/>`))
+			Expect(`<a><p:b/></a>`).ShouldNot(MatchXML(`<a xmlns:p="p"><p:b/></a>`))
+
+			// qualified names in attribute values and text are not resolved, so the declarations they rely on must match
+			Expect(`<a xmlns:p="u1" t="p:T"/>`).ShouldNot(MatchXML(`<a xmlns:p="u2" t="p:T"/>`))
+
+			// declaring the same namespace on a different element is not the same
+			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).ShouldNot(MatchXML(`<a><p:b xmlns:p="urn:u"/></a>`))
+			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).ShouldNot(MatchXML(`<a><b xmlns="urn:u"/></a>`))
 		})
 
 		It("matches documents regardless of the order of attributes that share a local name", func() {
