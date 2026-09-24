@@ -3,6 +3,12 @@
 ### Features
 
 ### Fixes
+
+### Maintenance
+
+## 1.44.0
+
+### Fixes
 - `BeNumerically` compares signed and unsigned integers by value: `-1` no longer equals `uint64(math.MaxUint64)` and `uint(5)` is now greater than `-3` (#925) [26e3c6b]
 - `BeNumerically("~")` no longer overflows when computing the distance between extreme integers (#928) [1955764]
 - `BeNumerically("==", x, threshold)` now honors the threshold for floats, as it already did for integers (#927) [10e2aca]
@@ -13,8 +19,6 @@
 - `HaveExactElements` reports missing or extra elements that start at index 0, and reports the first extra element's index rather than the last (#934) [af1b777]
 - `MatchYAML` compares every document in a multi-document stream rather than only the first; empty documents (e.g. a leading or trailing `---`) are ignored (#933) [2773796]
 - `MatchXML` ignores namespace prefixes: elements and attributes are compared by namespace URI, and the URIs declared on each element must match whatever prefix they are bound to (#932) [c0dbd89, 2565350]
-
-### Maintenance
 
 ## 1.43.1
 
