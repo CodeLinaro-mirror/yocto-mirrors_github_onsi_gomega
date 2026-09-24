@@ -43,6 +43,43 @@ var _ = Describe("MatchXMLMatcher", func() {
 		})
 	})
 
+	Context("with XML namespaces (https://github.com/onsi/gomega/issues/932)", func() {
+		It("matches documents that bind the same namespace to different prefixes", func() {
+			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).Should(MatchXML(`<a xmlns:q="urn:u"><q:b/></a>`))
+			Expect(`<a xmlns="urn:u"><b/></a>`).Should(MatchXML(`<p:a xmlns:p="urn:u"><p:b/></p:a>`))
+			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).Should(MatchXML(`<a><b xmlns="urn:u"/></a>`))
+			Expect(`<a xmlns:p="urn:u" p:x="1"/>`).Should(MatchXML(`<a xmlns:q="urn:u" q:x="1"/>`))
+		})
+
+		It("does not match documents whose elements are in different namespaces", func() {
+			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).ShouldNot(MatchXML(`<a xmlns:p="urn:v"><p:b/></a>`))
+			Expect(`<a xmlns="urn:u"><b/></a>`).ShouldNot(MatchXML(`<a><b/></a>`))
+			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).ShouldNot(MatchXML(`<a><b/></a>`))
+			Expect(`<a xmlns:p="urn:u"><p:b/></a>`).ShouldNot(MatchXML(`<a xmlns:p="urn:u"><b/></a>`))
+		})
+
+		It("compares attributes by namespace, not by prefix", func() {
+			Expect(`<a xmlns:p="urn:u" p:x="1"/>`).ShouldNot(MatchXML(`<a xmlns:p="urn:v" p:x="1"/>`))
+			Expect(`<a xmlns:p="urn:u" p:x="1"/>`).ShouldNot(MatchXML(`<a xmlns:p="urn:u" x="1"/>`))
+			Expect(`<a xmlns:p="urn:u" p:x="1"/>`).ShouldNot(MatchXML(`<a xmlns:p="urn:u" p:x="2"/>`))
+		})
+
+		It("matches documents regardless of the order of attributes that share a local name", func() {
+			a := `<a xmlns:p="urn:u" xmlns:q="urn:v" p:id="1" q:id="2" id="3"/>`
+			b := `<a id="3" q:id="2" xmlns:q="urn:v" p:id="1" xmlns:p="urn:u"/>`
+			Expect(b).Should(MatchXML(a))
+			Expect(a).Should(MatchXML(b))
+			Expect(`<a xmlns:p="urn:u" xmlns:q="urn:v" p:id="2" q:id="1"/>`).ShouldNot(MatchXML(a))
+		})
+
+		It("shows the documents as written in the failure message", func() {
+			failuresMessages := InterceptGomegaFailures(func() {
+				Expect(`<a xmlns:p="urn:u"><p:b/></a>`).To(MatchXML(`<a xmlns:p="urn:v"><p:b/></a>`))
+			})
+			Expect(failuresMessages).To(Equal([]string{"Expected\n<a xmlns:p=\"urn:u\"><p:b/></a>\nto match XML of\n<a xmlns:p=\"urn:v\"><p:b/></a>"}))
+		})
+	})
+
 	When("the expected is not valid XML", func() {
 		It("should error and explain why", func() {
 			success, err := (&MatchXMLMatcher{XMLToMatch: sample_01}).Match(`oops`)

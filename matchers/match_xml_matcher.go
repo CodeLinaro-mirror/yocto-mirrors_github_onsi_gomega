@@ -83,9 +83,9 @@ func parseXmlContent(content string) (*xmlNode, error) {
 
 		switch tok := tok.(type) {
 		case xml.StartElement:
-			attrs := attributesSlice(tok.Attr)
+			attrs := withoutNamespaceDeclarations(tok.Attr)
 			sort.Sort(attrs)
-			allNodes = append(allNodes, &xmlNode{XMLName: tok.Name, XMLAttr: tok.Attr})
+			allNodes = append(allNodes, &xmlNode{XMLName: tok.Name, XMLAttr: attrs})
 		case xml.EndElement:
 			if len(allNodes) > 1 {
 				allNodes[lastNodeIndex-1].Nodes = append(allNodes[lastNodeIndex-1].Nodes, lastNode)
@@ -107,6 +107,21 @@ func parseXmlContent(content string) (*xmlNode, error) {
 	trimParentNodesContentSpaces(firstNode)
 
 	return firstNode, nil
+}
+
+// withoutNamespaceDeclarations drops the xmlns="..." and xmlns:prefix="..."
+// attributes.  The decoder has already resolved element and attribute names to
+// namespace URIs, so comparing the declarations would only compare the prefixes
+// that the documents happen to use.
+func withoutNamespaceDeclarations(attrs []xml.Attr) attributesSlice {
+	filtered := attributesSlice{}
+	for _, attr := range attrs {
+		if attr.Name.Space == "xmlns" || (attr.Name.Space == "" && attr.Name.Local == "xmlns") {
+			continue
+		}
+		filtered = append(filtered, attr)
+	}
+	return filtered
 }
 
 func newXmlDecoder(reader io.Reader) *xml.Decoder {
