@@ -177,6 +177,21 @@ var _ = Describe("BeNumerically", func() {
 			Expect(int64(math.MaxInt64)).Should(BeNumerically("~", int64(math.MaxInt64)-1, 1))
 			Expect(uint64(0)).ShouldNot(BeNumerically("~", uint64(math.MaxUint64), 1))
 		})
+
+		It("honors an explicit threshold for == with floats, as it does for ints and uints (https://github.com/onsi/gomega/issues/927)", func() {
+			Expect(7).Should(BeNumerically("==", 5, 10))
+			Expect(uint(7)).Should(BeNumerically("==", uint(5), 10))
+			Expect(7.0).Should(BeNumerically("==", 5.0, 10))
+			Expect(7.0).Should(BeNumerically("==", 5, 2))
+			Expect(7).Should(BeNumerically("==", 5.0, 2))
+			Expect(5.1).Should(BeNumerically("==", 5.0, 0.1))
+			Expect(5.1).ShouldNot(BeNumerically("==", 5.0, 0.01))
+			Expect(7.0).ShouldNot(BeNumerically("==", 5.0, 1))
+
+			// without a threshold, == on floats is still exact equality and does not pick up ~'s default 1e-8 tolerance
+			Expect(5.000000001).ShouldNot(BeNumerically("==", 5.0))
+			Expect(5.000000001).Should(BeNumerically("~", 5.0))
+		})
 	})
 
 	When("passed a non-number", func() {

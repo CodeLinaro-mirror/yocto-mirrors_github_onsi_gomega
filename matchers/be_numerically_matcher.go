@@ -110,6 +110,10 @@ func (matcher *BeNumericallyMatcher) matchFloats(actual, compareTo, threshold fl
 	case "~":
 		return math.Abs(actual-compareTo) <= threshold
 	case "==":
+		// an explicit threshold is honored, as it is for integers; without one == means exact equality
+		if len(matcher.CompareTo) == 2 {
+			return math.Abs(actual-compareTo) <= threshold
+		}
 		return (actual == compareTo)
 	case ">":
 		return (actual > compareTo)
