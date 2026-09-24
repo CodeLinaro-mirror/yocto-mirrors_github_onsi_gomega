@@ -1120,7 +1120,7 @@ fmt.Sprintf(STRING, ARGS...)
 Ω(ACTUAL).Should(MatchJSON(EXPECTED))
 ```
 
-Both `ACTUAL` and `EXPECTED` must be a `string`, `[]byte` or a `Stringer`.  `MatchJSON` succeeds if both `ACTUAL` and `EXPECTED` are JSON representations of the same object.  This is verified by parsing both `ACTUAL` and `EXPECTED` and then asserting equality on the resulting objects with `reflect.DeepEqual`.  By doing this `MatchJSON` avoids any issues related to white space, formatting, and key-ordering.
+Both `ACTUAL` and `EXPECTED` must be a `string`, `[]byte` or a `Stringer`.  `MatchJSON` succeeds if both `ACTUAL` and `EXPECTED` are JSON representations of the same object.  This is verified by parsing both `ACTUAL` and `EXPECTED` and then asserting equality on the resulting objects with `reflect.DeepEqual`.  By doing this `MatchJSON` avoids any issues related to white space, formatting, and key-ordering.  Numbers are compared exactly and by value: `1`, `1.0` and `1e0` match one another, but `12345678901234567890` and `12345678901234567891` do not.
 
 It is an error for either `ACTUAL` or `EXPECTED` to be invalid JSON.
 

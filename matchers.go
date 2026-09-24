@@ -291,6 +291,7 @@ func HaveSuffix(suffix string, args ...any) types.GomegaMatcher {
 // MatchJSON succeeds if actual is a string or stringer of JSON that matches
 // the expected JSON.  The JSONs are decoded and the resulting objects are compared via
 // reflect.DeepEqual so things like key-ordering and whitespace shouldn't matter.
+// Numbers are compared exactly and by value, so 1, 1.0 and 1e0 match one another.
 func MatchJSON(json any) types.GomegaMatcher {
 	return &matchers.MatchJSONMatcher{
 		JSONToMatch: json,
