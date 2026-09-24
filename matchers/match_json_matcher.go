@@ -22,9 +22,13 @@ func (matcher *MatchJSONMatcher) Match(actual any) (success bool, err error) {
 	var aval any
 	var eval any
 
-	// this is guarded by prettyPrint
-	json.Unmarshal([]byte(actualString), &aval)
-	json.Unmarshal([]byte(expectedString), &eval)
+	// prettyPrint has checked the syntax, but decoding can still fail (e.g. on a number too large for a float64)
+	if err := json.Unmarshal([]byte(actualString), &aval); err != nil {
+		return false, fmt.Errorf("Actual '%s' should be valid JSON, but it is not.\nUnderlying error:%s", actualString, err)
+	}
+	if err := json.Unmarshal([]byte(expectedString), &eval); err != nil {
+		return false, fmt.Errorf("Expected '%s' should be valid JSON, but it is not.\nUnderlying error:%s", expectedString, err)
+	}
 	var equal bool
 	equal, matcher.firstFailurePath = deepEqual(aval, eval)
 	return equal, nil

@@ -73,6 +73,19 @@ var _ = Describe("MatchJSONMatcher", func() {
 		})
 	})
 
+	When("the JSON contains numbers too large for a float64", func() {
+		It("does not match distinct out-of-range numbers (https://github.com/onsi/gomega/issues/930)", func() {
+			success, _ := (&MatchJSONMatcher{JSONToMatch: `1e401`}).Match(`1e400`)
+			Expect(success).Should(BeFalse())
+
+			success, _ = (&MatchJSONMatcher{JSONToMatch: `{"a": 1e999}`}).Match(`{"a": 1e400}`)
+			Expect(success).Should(BeFalse())
+
+			success, _ = (&MatchJSONMatcher{JSONToMatch: `1e400`}).Match(`-1e400`)
+			Expect(success).Should(BeFalse())
+		})
+	})
+
 	When("the expected is neither a string nor a stringer nor a byte array", func() {
 		It("should error", func() {
 			success, err := (&MatchJSONMatcher{JSONToMatch: 2}).Match("{}")
