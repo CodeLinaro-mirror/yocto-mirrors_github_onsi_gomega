@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/onsi/gomega/format"
@@ -36,9 +37,10 @@ func (matcher *MatchJSONMatcher) Match(actual any) (success bool, err error) {
 	return equal, nil
 }
 
-// decodeJSON decodes s with every number in canonical form, so that numbers
-// are compared exactly (a float64 would lose precision) and by value (so that
-// 1, 1.0 and 1e0 are all equal).
+// decodeJSON decodes s as json.Unmarshal would into an any, except that
+// integers too large to be represented exactly by a float64 are decoded as
+// canonicalJSONNumbers, so that they are compared exactly rather than after
+// rounding to the nearest float64.
 func decodeJSON(s string) (any, error) {
 	decoder := json.NewDecoder(strings.NewReader(s))
 	decoder.UseNumber()
@@ -46,31 +48,40 @@ func decodeJSON(s string) (any, error) {
 	if err := decoder.Decode(&value); err != nil {
 		return nil, err
 	}
-	return canonicalizeJSONNumbers(value), nil
+	return decodeJSONNumbers(value), nil
 }
 
-// canonicalJSONNumber is a JSON number written as its significant digits
-// followed by a base-10 exponent, e.g. -15e-1 for -1.50 or -15E-1. Two JSON
-// numbers have the same value exactly when they have the same canonical form.
-type canonicalJSONNumber string
-
-func canonicalizeJSONNumbers(value any) any {
+func decodeJSONNumbers(value any) any {
 	switch v := value.(type) {
 	case []any:
 		for i, element := range v {
-			v[i] = canonicalizeJSONNumbers(element)
+			v[i] = decodeJSONNumbers(element)
 		}
 	case map[string]any:
 		for key, element := range v {
-			v[key] = canonicalizeJSONNumbers(element)
+			v[key] = decodeJSONNumbers(element)
 		}
 	case json.Number:
-		return canonicalizeJSONNumber(v)
+		return decodeJSONNumber(v)
 	}
 	return value
 }
 
-func canonicalizeJSONNumber(n json.Number) canonicalJSONNumber {
+// canonicalJSONNumber is a JSON number written as its significant digits
+// followed by a base-10 exponent, e.g. 12345678901234567890 and
+// 1.234567890123456789e19 are both 123456789012345678900e1. Two JSON numbers
+// have the same value exactly when they have the same canonical form.
+type canonicalJSONNumber string
+
+// maxExactFloat64Integer is 2^53: every integer with a magnitude no greater
+// than this is represented exactly by a float64.
+var maxExactFloat64Integer = new(big.Int).Lsh(big.NewInt(1), 53)
+
+// decodeJSONNumber returns integers whose magnitude exceeds 2^53 in canonical
+// form, and every other number as the float64 that json.Unmarshal would
+// produce.  Numbers that are not integers but are too large for a float64 are
+// also returned in canonical form.
+func decodeJSONNumber(n json.Number) any {
 	s, sign := string(n), ""
 	if rest, negative := strings.CutPrefix(s, "-"); negative {
 		s, sign = rest, "-"
@@ -79,9 +90,6 @@ func canonicalizeJSONNumber(n json.Number) canonicalJSONNumber {
 	integerPart, fractionPart, _ := strings.Cut(mantissa, ".")
 
 	digits := strings.TrimLeft(integerPart+fractionPart, "0")
-	if digits == "" {
-		return "0" // so that -0 and 0 are equal
-	}
 	significantDigits := strings.TrimRight(digits, "0")
 
 	// the exponent is parsed as a big.Int as JSON puts no limit on its size
@@ -90,8 +98,28 @@ func canonicalizeJSONNumber(n json.Number) canonicalJSONNumber {
 		exponent.SetString(exponentString, 10) // the syntax has been checked by the decoder
 	}
 	exponent.Add(exponent, big.NewInt(int64(len(digits)-len(significantDigits)-len(fractionPart))))
+	canonical := canonicalJSONNumber(sign + significantDigits + "e" + exponent.String())
 
-	return canonicalJSONNumber(sign + significantDigits + "e" + exponent.String())
+	if significantDigits != "" && exponent.Sign() >= 0 && exceedsMaxExactFloat64Integer(significantDigits, exponent) {
+		return canonical
+	}
+	f, err := strconv.ParseFloat(string(n), 64)
+	if err != nil {
+		// the syntax has been checked, so the number must be too large for a float64
+		return canonical
+	}
+	return f
+}
+
+// exceedsMaxExactFloat64Integer reports whether significantDigits * 10^exponent,
+// with exponent >= 0, is greater than 2^53.
+func exceedsMaxExactFloat64Integer(significantDigits string, exponent *big.Int) bool {
+	if exponent.Cmp(big.NewInt(16)) >= 0 {
+		return true // 10^16 > 2^53
+	}
+	value, _ := new(big.Int).SetString(significantDigits, 10)
+	value.Mul(value, new(big.Int).Exp(big.NewInt(10), exponent, nil))
+	return value.Cmp(maxExactFloat64Integer) > 0
 }
 
 func (matcher *MatchJSONMatcher) FailureMessage(actual any) (message string) {
