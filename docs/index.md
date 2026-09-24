@@ -1120,7 +1120,7 @@ fmt.Sprintf(STRING, ARGS...)
 Ω(ACTUAL).Should(MatchJSON(EXPECTED))
 ```
 
-Both `ACTUAL` and `EXPECTED` must be a `string`, `[]byte` or a `Stringer`.  `MatchJSON` succeeds if both `ACTUAL` and `EXPECTED` are JSON representations of the same object.  This is verified by parsing both `ACTUAL` and `EXPECTED` and then asserting equality on the resulting objects with `reflect.DeepEqual`.  By doing this `MatchJSON` avoids any issues related to white space, formatting, and key-ordering.
+Both `ACTUAL` and `EXPECTED` must be a `string`, `[]byte` or a `Stringer`.  `MatchJSON` succeeds if both `ACTUAL` and `EXPECTED` are JSON representations of the same object.  This is verified by parsing both `ACTUAL` and `EXPECTED` and then asserting equality on the resulting objects with `reflect.DeepEqual`.  By doing this `MatchJSON` avoids any issues related to white space, formatting, and key-ordering.  Numbers are compared as `float64`s, except for integers too large to be represented exactly by a `float64` (beyond ±2^53) and for numbers too large to fit in a `float64` at all, which are compared exactly.  So `12345678901234567890` matches `1.234567890123456789e19` but not `12345678901234567891`.
 
 It is an error for either `ACTUAL` or `EXPECTED` to be invalid JSON.
 
@@ -1134,6 +1134,8 @@ In some cases it is useful to match two JSON strings while ignoring list order. 
 
 Both `ACTUAL` and `EXPECTED` must be a `string`, `[]byte` or a `Stringer`.  `MatchXML` succeeds if both `ACTUAL` and `EXPECTED` are XML representations of the same object.  This is verified by parsing both `ACTUAL` and `EXPECTED` and then asserting equality on the resulting objects with `reflect.DeepEqual`.  By doing this `MatchXML` avoids any issues related to white space or formatting.
 
+Namespace prefixes are ignored: element and attribute names are compared by namespace URI, and the namespace declarations on each element (`xmlns="..."` and `xmlns:prefix="..."`) are compared by the URIs they declare, not the prefixes they bind.  So `<a xmlns:p="urn:u"><p:b/></a>` matches `<a xmlns:q="urn:u"><q:b/></a>` and `<a xmlns="urn:u"><b/></a>` matches `<p:a xmlns:p="urn:u"><p:b/></p:a>`.  The namespace URIs declared on each element must still match, even if they are unused, so `<a xmlns:p="urn:u"/>` matches neither `<a/>` nor `<a xmlns:p="urn:v"/>`.
+
 It is an error for either `ACTUAL` or `EXPECTED` to be invalid XML.
 
 #### MatchYAML(yaml any)
@@ -1143,6 +1145,8 @@ It is an error for either `ACTUAL` or `EXPECTED` to be invalid XML.
 ```
 
 Both `ACTUAL` and `EXPECTED` must be a `string`, `[]byte` or a `Stringer`.  `MatchYAML` succeeds if both `ACTUAL` and `EXPECTED` are YAML representations of the same object.  This is verified by parsing both `ACTUAL` and `EXPECTED` and then asserting equality on the resulting objects with `reflect.DeepEqual`.  By doing this `MatchYAML` avoids any issues related to white space, formatting, and key-ordering.
+
+If `ACTUAL` or `EXPECTED` is a stream of several YAML documents (separated by `---`), every document is compared, in order, and both streams must contain the same number of documents.  Empty documents - such as those produced by a leading or trailing `---` - are ignored.
 
 It is an error for either `ACTUAL` or `EXPECTED` to be invalid YAML.
 
