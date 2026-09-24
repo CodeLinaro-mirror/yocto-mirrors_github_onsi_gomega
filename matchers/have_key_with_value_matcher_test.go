@@ -68,6 +68,28 @@ var _ = Describe("HaveKeyWithValue", func() {
 			Expect(err).Should(HaveOccurred())
 		})
 
+		It("succeeds if any matching key has a matching value, even if the matchers error on other entries, and errors only if nothing matches (https://github.com/onsi/gomega/issues/926)", func() {
+			keyErrors := map[any]int{"a": 1, 2: 2, "b": 3, "c": 4}
+			valueErrors := map[string]any{"aFoo": "x", "bFoo": 2, "cFoo": "y", "dFoo": "z"}
+			for range 100 {
+				success, err := (&HaveKeyWithValueMatcher{Key: BeNumerically(">", 1), Value: 2}).Match(keyErrors)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(success).Should(BeTrue())
+
+				success, err = (&HaveKeyWithValueMatcher{Key: BeNumerically(">", 1), Value: 3}).Match(keyErrors)
+				Expect(err).Should(MatchError(ContainSubstring("HaveKeyWithValue's key matcher failed with")))
+				Expect(success).Should(BeFalse())
+
+				success, err = (&HaveKeyWithValueMatcher{Key: HaveSuffix("Foo"), Value: BeNumerically(">", 1)}).Match(valueErrors)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(success).Should(BeTrue())
+
+				success, err = (&HaveKeyWithValueMatcher{Key: HaveSuffix("Foo"), Value: BeNumerically(">", 2)}).Match(valueErrors)
+				Expect(err).Should(MatchError(ContainSubstring("HaveKeyWithValue's value matcher failed with")))
+				Expect(success).Should(BeFalse())
+			}
+		})
+
 		It("succeeds if any matching key has a matching value (https://github.com/onsi/gomega/issues/929)", func() {
 			actual := map[string]string{"aFoo": "x", "bFoo": "Bar", "cFoo": "y", "dFoo": "z"}
 			for range 100 {
@@ -132,6 +154,40 @@ var _ = Describe("HaveKeyWithValue", func() {
 				success, err = (&HaveKeyWithValueMatcher{Key: "foo", Value: ContainSubstring("1")}).Match(universalMapIter2)
 				Expect(success).Should(BeFalse())
 				Expect(err).Should(HaveOccurred())
+			})
+
+			It("succeeds if any matching key has a matching value, even if the matchers error on other entries, and errors only if nothing matches (https://github.com/onsi/gomega/issues/926)", func() {
+				keyErrorFirst := func(yield func(any, int) bool) {
+					_ = yield("a", 1) && yield(2, 2) && yield("b", 3)
+				}
+				keyMatchFirst := func(yield func(any, int) bool) {
+					_ = yield(2, 2) && yield("a", 1) && yield("b", 3)
+				}
+				for _, actual := range []any{keyErrorFirst, keyMatchFirst} {
+					success, err := (&HaveKeyWithValueMatcher{Key: BeNumerically(">", 1), Value: 2}).Match(actual)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(success).Should(BeTrue())
+
+					success, err = (&HaveKeyWithValueMatcher{Key: BeNumerically(">", 1), Value: 3}).Match(actual)
+					Expect(err).Should(MatchError(ContainSubstring("HaveKeyWithValue's key matcher failed with")))
+					Expect(success).Should(BeFalse())
+				}
+
+				valueErrorFirst := func(yield func(string, any) bool) {
+					_ = yield("aFoo", "x") && yield("bFoo", 2) && yield("cFoo", "y")
+				}
+				valueMatchFirst := func(yield func(string, any) bool) {
+					_ = yield("bFoo", 2) && yield("aFoo", "x") && yield("cFoo", "y")
+				}
+				for _, actual := range []any{valueErrorFirst, valueMatchFirst} {
+					success, err := (&HaveKeyWithValueMatcher{Key: HaveSuffix("Foo"), Value: BeNumerically(">", 1)}).Match(actual)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(success).Should(BeTrue())
+
+					success, err = (&HaveKeyWithValueMatcher{Key: HaveSuffix("Foo"), Value: BeNumerically(">", 2)}).Match(actual)
+					Expect(err).Should(MatchError(ContainSubstring("HaveKeyWithValue's value matcher failed with")))
+					Expect(success).Should(BeFalse())
+				}
 			})
 
 			It("succeeds if any matching key has a matching value (https://github.com/onsi/gomega/issues/929)", func() {

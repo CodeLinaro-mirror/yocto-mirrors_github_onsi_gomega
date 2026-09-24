@@ -58,6 +58,19 @@ var _ = Describe("HaveKey", func() {
 			Expect(success).Should(BeFalse())
 			Expect(err).Should(HaveOccurred())
 		})
+
+		It("succeeds if any key matches, even if the matcher errors on other keys, and errors only if no key matches (https://github.com/onsi/gomega/issues/926)", func() {
+			actual := map[any]int{"a": 1, 2: 2, "b": 3, "c": 4}
+			for range 100 {
+				success, err := (&HaveKeyMatcher{Key: BeNumerically(">", 1)}).Match(actual)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(success).Should(BeTrue())
+
+				success, err = (&HaveKeyMatcher{Key: BeNumerically(">", 2)}).Match(actual)
+				Expect(err).Should(MatchError(ContainSubstring("HaveKey's key matcher failed with")))
+				Expect(success).Should(BeFalse())
+			}
+		})
 	})
 
 	When("passed something that is not a map", func() {
@@ -105,6 +118,24 @@ var _ = Describe("HaveKey", func() {
 				success, err := (&HaveKeyMatcher{Key: ContainSubstring("ar")}).Match(universalIter2)
 				Expect(success).Should(BeFalse())
 				Expect(err).Should(HaveOccurred())
+			})
+
+			It("succeeds if any key matches, even if the matcher errors on other keys, and errors only if no key matches (https://github.com/onsi/gomega/issues/926)", func() {
+				errorFirst := func(yield func(any, int) bool) {
+					_ = yield("a", 1) && yield(2, 2) && yield("b", 3)
+				}
+				matchFirst := func(yield func(any, int) bool) {
+					_ = yield(2, 2) && yield("a", 1) && yield("b", 3)
+				}
+				for _, actual := range []any{errorFirst, matchFirst} {
+					success, err := (&HaveKeyMatcher{Key: BeNumerically(">", 1)}).Match(actual)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(success).Should(BeTrue())
+
+					success, err = (&HaveKeyMatcher{Key: BeNumerically(">", 2)}).Match(actual)
+					Expect(err).Should(MatchError(ContainSubstring("HaveKey's key matcher failed with")))
+					Expect(success).Should(BeFalse())
+				}
 			})
 		})
 
